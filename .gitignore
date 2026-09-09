@@ -1,0 +1,72 @@
+# ===== 依赖 =====
+**/node_modules/
+**/.pnpm-store/
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+
+# ===== 构建产物 =====
+**/dist/
+**/build/
+**/.output/
+**/.next/
+**/out/
+
+# ===== 环境变量 =====
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.development
+**/.env.production
+
+# ===== IDE 和系统 =====
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== 日志 =====
+**/logs/
+**/*.log
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+
+# ===== 缓存 =====
+**/.cache/
+**/.parcel-cache/
+**/.vite/
+**/.turbo/
+**/.nuxt/
+**/.vercel/
+
+# ===== 测试覆盖率 =====
+**/coverage/
+**/.nyc_output/
+
+# ===== 临时文件 =====
+**/.tmp/
+**/temp/
+**/*.tmp
+
+# ===== 后端特有 =====
+**/uploads/
+**/storage/
+**/public/uploads/
+**/dist/
+
+# ===== 前端特有 =====
+**/.vite/
+**/dist/
+**/node_modules/
+
+# ===== 其他 =====
+**/.eslintcache
+**/.prettiercache
+*.tsbuildinfo
