@@ -21,6 +21,8 @@
       class="wallpaper-img"
       :src="imageUrl"
       :style="{ objectFit: fitMode }"
+      width="2560"
+      height="1440"
       alt=""
       draggable="false"
       @error="onImageError"
