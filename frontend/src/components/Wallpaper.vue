@@ -31,7 +31,7 @@
     <div class="brightness-overlay" :style="{ opacity: brightness }"></div>
   </div>
 
-  <!-- ====== 控制面板（保持不变） ====== -->
+  <!-- ====== 控制面板 ====== -->
   <div class="controls-wrapper">
     <button class="dot-trigger" @click="showControls = !showControls" title="壁纸设置">
       <span>⚙️</span>
@@ -102,21 +102,25 @@ const props = defineProps<{
 type WallpaperMode = 'video' | 'image'
 type FitMode = 'cover' | 'contain'
 
+// ===== 安全访问 localStorage =====
+const storage = typeof window !== 'undefined' ? window.localStorage : null
+
 // ===== 默认值 =====
-const DEFAULT_IMAGE = '/background.jpg'          // 备用本地图片
-const videoSrc = props.defaultVideo || '/src/assets/lemon.mp4'
+const DEFAULT_IMAGE = '/background.jpg'
+// 修复1：视频路径改为 public 目录
+const videoSrc = props.defaultVideo || '/videos/lemon.mp4'
 
 // ===== localStorage 键名 =====
-const DAILY_KEY = 'dailyWallpaper'               // 存储每日壁纸 URL
-const DAILY_DATE_KEY = 'dailyWallpaperDate'      // 存储获取日期（YYYY-MM-DD）
-const USER_WALLPAPER_KEY = 'userWallpaper'       // 标记用户是否自定义过
+const DAILY_KEY = 'dailyWallpaper'
+const DAILY_DATE_KEY = 'dailyWallpaperDate'
+const USER_WALLPAPER_KEY = 'userWallpaper'
 
-// ===== 从 localStorage 恢复 =====
-const savedMode = localStorage.getItem('wallpaperMode') as WallpaperMode | null
-const savedImage = localStorage.getItem('background')          // 当前使用的壁纸
-const savedBrightness = localStorage.getItem('wallpaperBrightness')
-const savedLowPerf = localStorage.getItem('lowPerformance')
-const savedFit = localStorage.getItem('wallpaperFit') as FitMode | null
+// ===== 从 localStorage 恢复（安全访问） =====
+const savedMode = storage?.getItem('wallpaperMode') as WallpaperMode | null
+const savedImage = storage?.getItem('background')
+const savedBrightness = storage?.getItem('wallpaperBrightness')
+const savedLowPerf = storage?.getItem('lowPerformance')
+const savedFit = storage?.getItem('wallpaperFit') as FitMode | null
 
 // ===== 状态 =====
 const mode = ref<WallpaperMode>(savedMode || props.defaultMode || 'video')
@@ -140,53 +144,45 @@ brightness.value = normalizeBrightness(brightness.value)
 
 // ===== 每日壁纸获取 =====
 const fetchDailyWallpaper = async () => {
-  // 如果用户自定义过，则不覆盖
-  if (localStorage.getItem(USER_WALLPAPER_KEY) === 'true') {
+  if (storage?.getItem(USER_WALLPAPER_KEY) === 'true') {
     console.log('用户已自定义壁纸，跳过每日更新')
     return
   }
 
-  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
-  const storedDate = localStorage.getItem(DAILY_DATE_KEY)
-  const storedUrl = localStorage.getItem(DAILY_KEY)
+  const today = new Date().toISOString().slice(0, 10)
+  const storedDate = storage?.getItem(DAILY_DATE_KEY)
+  const storedUrl = storage?.getItem(DAILY_KEY)
 
-  // 如果今日已获取且图片存在，直接使用
   if (storedDate === today && storedUrl) {
     imageUrl.value = storedUrl
-    // 同步更新 background 键
-    localStorage.setItem('background', storedUrl)
+    storage?.setItem('background', storedUrl)
     return
   }
 
-  // 否则从网络获取新图片
   try {
-    // 使用 picsum.photos 随机图片（支持跨域）
     const res = await fetch('https://picsum.photos/1920/1080', { cache: 'no-store' })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const url = res.url // 最终图片的实际 URL
-    // 存储
-    localStorage.setItem(DAILY_KEY, url)
-    localStorage.setItem(DAILY_DATE_KEY, today)
-    localStorage.setItem('background', url)
+    const url = res.url
+    storage?.setItem(DAILY_KEY, url)
+    storage?.setItem(DAILY_DATE_KEY, today)
+    storage?.setItem('background', url)
     imageUrl.value = url
     console.log('每日壁纸更新成功')
   } catch (error) {
     console.warn('获取每日壁纸失败，使用本地默认壁纸', error)
-    // 回退到本地默认图片
     imageUrl.value = DEFAULT_IMAGE
-    localStorage.setItem('background', DEFAULT_IMAGE)
+    storage?.setItem('background', DEFAULT_IMAGE)
   }
 }
 
 // ===== 核心方法 =====
 const setMode = (newMode: WallpaperMode) => {
   mode.value = newMode
-  localStorage.setItem('wallpaperMode', newMode)
+  storage?.setItem('wallpaperMode', newMode)
   if (newMode === 'video' && !lowPerformance.value) {
     requestAnimationFrame(() => playVideo())
   } else if (newMode === 'image') {
-    // 切换到静态模式时，尝试获取每日壁纸（如果未自定义）
-    if (localStorage.getItem(USER_WALLPAPER_KEY) !== 'true') {
+    if (storage?.getItem(USER_WALLPAPER_KEY) !== 'true') {
       fetchDailyWallpaper()
     }
   }
@@ -202,26 +198,23 @@ const playVideo = () => {
 }
 
 const saveBrightness = () => {
-  localStorage.setItem('wallpaperBrightness', String(brightness.value))
+  storage?.setItem('wallpaperBrightness', String(brightness.value))
 }
 
-// 用户自定义壁纸（网络图片）
 const applyOnlineUrl = () => {
   const url = onlineUrl.value.trim()
   if (!url || !/^https?:\/\/.+/.test(url)) {
     console.warn('请输入有效的图片地址（以 http:// 或 https:// 开头）')
     return
   }
-  // 标记用户自定义
-  localStorage.setItem(USER_WALLPAPER_KEY, 'true')
+  storage?.setItem(USER_WALLPAPER_KEY, 'true')
   imageUrl.value = url
-  localStorage.setItem('background', url)
+  storage?.setItem('background', url)
   setMode('image')
   onlineUrl.value = ''
   showControls.value = false
 }
 
-// 用户自定义壁纸（上传文件）
 const onFileChange = (e: Event) => {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
@@ -229,33 +222,28 @@ const onFileChange = (e: Event) => {
   const reader = new FileReader()
   reader.onload = () => {
     const result = reader.result as string
-    localStorage.setItem(USER_WALLPAPER_KEY, 'true')
+    storage?.setItem(USER_WALLPAPER_KEY, 'true')
     imageUrl.value = result
-    localStorage.setItem('background', result)
+    storage?.setItem('background', result)
     setMode('image')
   }
   reader.readAsDataURL(file)
 }
 
-// 清除用户自定义，恢复每日壁纸
 const clearImage = () => {
-  localStorage.removeItem(USER_WALLPAPER_KEY)
-  // 清除旧的自定义壁纸，但保留每日壁纸可能已存在
-  // 重新获取每日壁纸
+  storage?.removeItem(USER_WALLPAPER_KEY)
   fetchDailyWallpaper()
-  // 如果获取失败，至少保留默认图片
 }
 
-// 暴露重置每日壁纸方法
 const resetToDaily = () => {
-  localStorage.removeItem(USER_WALLPAPER_KEY)
+  storage?.removeItem(USER_WALLPAPER_KEY)
   fetchDailyWallpaper()
 }
 
 const toggleLowPerformance = (e: Event) => {
   const checked = (e.target as HTMLInputElement).checked
   lowPerformance.value = checked
-  localStorage.setItem('lowPerformance', String(checked))
+  storage?.setItem('lowPerformance', String(checked))
   if (checked && mode.value === 'video') {
     if (imageUrl.value) {
       setMode('image')
@@ -284,13 +272,11 @@ const onImageLoad = () => {
 const onImageError = () => {
   console.warn('静态壁纸加载失败，尝试回退')
   if (imageUrl.value === DEFAULT_IMAGE) {
-    // 默认图片也失败，清空显示备用背景
     imageUrl.value = ''
-    localStorage.removeItem('background')
+    storage?.removeItem('background')
   } else {
-    // 回退到默认图片
     imageUrl.value = DEFAULT_IMAGE
-    localStorage.setItem('background', DEFAULT_IMAGE)
+    storage?.setItem('background', DEFAULT_IMAGE)
   }
 }
 
@@ -302,7 +288,7 @@ const checkPerformance = () => {
   const cores = navigator.hardwareConcurrency
   if ((mem && mem < 4) || (cores && cores < 4)) {
     lowPerformance.value = true
-    localStorage.setItem('lowPerformance', 'true')
+    storage?.setItem('lowPerformance', 'true')
     if (mode.value === 'video') {
       if (imageUrl.value) {
         setMode('image')
@@ -315,8 +301,18 @@ const checkPerformance = () => {
 
 // ===== 监听 =====
 watch(fitMode, (val) => {
-  localStorage.setItem('wallpaperFit', val)
+  storage?.setItem('wallpaperFit', val)
 })
+
+// ===== 修复：保存函数引用以便移除 =====
+const handleFocus = () => {
+  if (!document.hidden && mode.value === 'video' && !lowPerformance.value) {
+    const video = videoRef.value
+    if (video && video.paused && !video.ended) {
+      video.play().catch(() => {})
+    }
+  }
+}
 
 // ===== 生命周期 =====
 const handleVideoLoaded = () => {
@@ -340,13 +336,11 @@ const handleVisibilityChange = () => {
 onMounted(() => {
   checkPerformance()
 
-  // 如果当前是静态模式，尝试获取每日壁纸（若用户未自定义）
-  if (mode.value === 'image' && localStorage.getItem(USER_WALLPAPER_KEY) !== 'true') {
+  if (mode.value === 'image' && storage?.getItem(USER_WALLPAPER_KEY) !== 'true') {
     fetchDailyWallpaper()
   }
 
-  const layer = document.querySelector('.wallpaper-layer') as HTMLElement
-  if (layer) layer.style.opacity = '1'
+  // 修复3：删除 opacity 控制，直接在 CSS 中设置为 1
 
   const video = videoRef.value
   if (video) {
@@ -358,14 +352,7 @@ onMounted(() => {
   }
 
   document.addEventListener('visibilitychange', handleVisibilityChange)
-  window.addEventListener('focus', () => {
-    if (!document.hidden && mode.value === 'video' && !lowPerformance.value) {
-      const video = videoRef.value
-      if (video && video.paused && !video.ended) {
-        video.play().catch(() => {})
-      }
-    }
-  })
+  window.addEventListener('focus', handleFocus)
 })
 
 onUnmounted(() => {
@@ -375,13 +362,13 @@ onUnmounted(() => {
     video.removeEventListener('error', onVideoError)
   }
   document.removeEventListener('visibilitychange', handleVisibilityChange)
-  window.removeEventListener('focus', () => {})
+  window.removeEventListener('focus', handleFocus) // 修复4：移除正确引用
 })
 
 watch(mode, (newMode) => {
   if (newMode === 'video' && !lowPerformance.value) {
     requestAnimationFrame(() => playVideo())
-  } else if (newMode === 'image' && localStorage.getItem(USER_WALLPAPER_KEY) !== 'true') {
+  } else if (newMode === 'image' && storage?.getItem(USER_WALLPAPER_KEY) !== 'true') {
     fetchDailyWallpaper()
   }
 })
@@ -396,14 +383,14 @@ defineExpose({
   setMode,
   setBrightness: (v: number) => {
     brightness.value = normalizeBrightness(v)
-    localStorage.setItem('wallpaperBrightness', String(brightness.value))
+    storage?.setItem('wallpaperBrightness', String(brightness.value))
   },
   setImage: (url: string) => {
     const v = url.trim()
     if (!v) return
-    localStorage.setItem(USER_WALLPAPER_KEY, 'true')
+    storage?.setItem(USER_WALLPAPER_KEY, 'true')
     imageUrl.value = v
-    localStorage.setItem('background', v)
+    storage?.setItem('background', v)
     setMode('image')
   },
   clearImage,
@@ -414,13 +401,13 @@ defineExpose({
 
 <style scoped>
 /* ===== 壁纸层 ===== */
+/* 修复3：删除 opacity: 0，直接设为 1 */
 .wallpaper-layer {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: -1; /* 修复2：负层级避免遮挡 */
   pointer-events: none;
   background: #111;
-  opacity: 0;
   transition: opacity 0.8s ease;
   transform: translateZ(0);
   backface-visibility: hidden;
@@ -453,7 +440,7 @@ defineExpose({
 }
 
 .wallpaper-layer .wallpaper-fallback {
-  background: #1a1a1e; /* 深灰色备用背景 */
+  background: #1a1a1e;
 }
 
 .wallpaper-layer .brightness-overlay {

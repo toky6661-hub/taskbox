@@ -127,92 +127,125 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import Wallpaper from '../components/Wallpaper.vue'
 
+// ===== 安全访问 localStorage =====
+const storage = typeof window !== 'undefined' ? window.localStorage : null
+
+// ===== API 地址 =====
+const API_URL = import.meta.env.VITE_API_URL || ''
+
 const router = useRouter()
 const userStore = useUserStore()
 
-// 切换登录/注册
 const isLogin = ref(true)
 
-// 表单数据
-const loginForm = reactive({ email: '', password: '' })
-const registerForm = reactive({ username: '', email: '', password: '' })
+const loginForm = reactive({
+  email: '',
+  password: ''
+})
 
-// 状态
+const registerForm = reactive({
+  username: '',
+  email: '',
+  password: ''
+})
+
 const loading = ref(false)
 const loginError = ref('')
 const registerError = ref('')
 const showPassword = ref(false)
 
-// 登录处理
+// ===== 检查是否已登录 =====
+onMounted(() => {
+  const token = storage?.getItem('token')
+  if (token && userStore.user) {
+    router.push('/')
+  }
+})
+
+// ===== 登录处理 =====
 const handleLogin = async () => {
   loginError.value = ''
   loading.value = true
+
   try {
-    // 调用后端登录接口
-    const res = await fetch('http://localhost:3000/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: loginForm.email,
-        password: loginForm.password,
-      }),
-    })
+    const res = await fetch(
+      `${API_URL}/api/auth/login`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: loginForm.email,
+          password: loginForm.password
+        })
+      }
+    )
+
     const data = await res.json()
+
     if (!res.ok || !data.success) {
       loginError.value = data.message || '登录失败'
       return
     }
-    // 保存用户和 token
+
     const { token, user } = data.data
-    localStorage.setItem('token', token)
+
+    storage?.setItem('token', token)
     userStore.setUser(user)
-    // 跳转到首页
+
     router.push('/')
   } catch (error) {
     loginError.value = '网络错误，请重试'
+    console.error('登录错误:', error)
   } finally {
     loading.value = false
   }
 }
 
-// 注册处理
+// ===== 注册处理 =====
 const handleRegister = async () => {
   registerError.value = ''
-  if (registerForm.password.length < 6) {
-    registerError.value = '密码至少6位'
-    return
-  }
   loading.value = true
+
   try {
-    const res = await fetch('http://localhost:3000/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: registerForm.username,
-        email: registerForm.email,
-        password: registerForm.password,
-      }),
-    })
+    const res = await fetch(
+      `${API_URL}/api/auth/register`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          username: registerForm.username,
+          email: registerForm.email,
+          password: registerForm.password
+        })
+      }
+    )
+
     const data = await res.json()
+
     if (!res.ok || !data.success) {
       registerError.value = data.message || '注册失败'
       return
     }
-    // 注册成功后自动跳转到登录
+
+    // 注册成功后切换到登录
     isLogin.value = true
     loginForm.email = registerForm.email
-    loginForm.password = registerForm.password
     registerForm.username = ''
     registerForm.email = ''
     registerForm.password = ''
-    // 可提示注册成功（可选）
+    registerError.value = '注册成功，请登录'
   } catch (error) {
     registerError.value = '网络错误，请重试'
+    console.error('注册错误:', error)
   } finally {
     loading.value = false
   }
@@ -226,7 +259,7 @@ const handleRegister = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
+  z-index: 10; /* 修复：提高层级，在壁纸之上 */
 }
 
 .login-container {
@@ -234,6 +267,10 @@ const handleRegister = async () => {
   max-width: 420px;
   padding: 20px;
   box-sizing: border-box;
+  pointer-events: none; /* 让点击穿透到壁纸，但内部可交互 */
+}
+.login-container * {
+  pointer-events: auto; /* 内部元素恢复点击 */
 }
 
 .login-card {

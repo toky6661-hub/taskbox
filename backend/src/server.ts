@@ -1,36 +1,65 @@
-const dotenv = require("dotenv");
-const pool = require("./config/database");
-const app = require("./app");
-/*import type { Request, Response } from "express";*/
+// src/server.ts
+const express = require("express");
+const cors = require("cors");
 
-//全局拦截中间件
-/*app.use((req: Request, res: Response): void => {
-  console.log('🔥 server.ts 捕获请求:', req.method, req.url);
-  res.send('server.ts interceptor');
-});*/
+console.log("🚀 服务器启动中...");
 
-dotenv.config();
+// ===== 加载路由 =====
+console.log("📦 加载 auth.routes...");
+const authRouter = require("./routes/auth.routes");
+console.log("✅ auth.routes 加载完成");
 
-/*const PORT = Number(process.env.PORT) || 3000;重复监听*/
+console.log("📦 加载 hot.routes...");
+const hotRoutes = require("./routes/hot.routes");
+console.log("✅ hot.routes 加载完成");
 
-async function startServer() {
-  try {
-    const connection = await pool.getConnection();
+const app = express();
 
-    console.log("Connected to the database successfully.");
+// ===== CORS =====
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
-    connection.release(); // Release the connection back to the pool    
+app.use(express.json());
 
- /*   app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });*/
+// ===== 健康检查 =====
+app.get("/api/health", (_req: any, res: any) => {
+  res.json({
+    status: "ok",
+    message: "Health check",
+  });
+});
 
-  } catch (error) {
+// ===== 挂载路由 =====
+app.use("/api/auth", authRouter);
+app.use("/api/hot", hotRoutes);
 
-    console.error("Error connecting to the database:", error);
-    process.exit(1); // Exit the process with an error code
-    
-  }
-}
+// ===== 404 =====
+app.use((_req: any, res: any) => {
+  res.status(404).json({
+    error: "Not found",
+  });
+});
 
-startServer();
+// ===== 全局错误处理 =====
+app.use((err: any, _req: any, res: any, _next: any) => {
+  console.error("❌ 全局错误:", err);
+  res.status(500).json({
+    error: err.message,
+  });
+});
+
+// ===== 关键：启动服务器！ =====
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`✅ Server is running on http://localhost:${PORT}`);
+  console.log(`   Health: http://localhost:${PORT}/api/health`);
+  console.log(`   Auth:   http://localhost:${PORT}/api/auth`);
+  console.log(`   Hot:    http://localhost:${PORT}/api/hot`);
+});
+
+module.exports = app;
