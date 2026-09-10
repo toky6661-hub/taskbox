@@ -1,0 +1,5 @@
+[33m77d570b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m feat: 完成Aiven MySQL配置、前端构建修复、环境变量优化
+[33m8af474e[m fix: 修复后端启动问题（添加app.listen）；更新CORS和Vite代理配置；迁移视频到public目录；完善.gitignore忽略环境变量文件
+[33m63bf9f2[m fix: 修复后端启动问题（添加app.listen）；更新CORS和Vite代理配置；迁移视频到public目录；完善.gitignore忽略环境变量文件
+[33m5183d64[m fix: update TypeScript config for Vercel
+[33m9c6a99d[m feat: 初始化 WorkBox 项目，包含前后端基础架构
