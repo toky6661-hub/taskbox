@@ -7,12 +7,12 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: Number(process.env.DB_PORT),
-  
-  // ← 这里！原来是 sll，改正为 ssl
+
+  // 👇 修改这里
   ssl: {
-  minVersion: "TLSv1.2",
-  rejectUnauthorized: true
-},
+    minVersion: "TLSv1.2",
+    rejectUnauthorized: false // 本地开发：允许自签名证书
+  },
 
   waitForConnections: true,
   connectionLimit: 10,
@@ -28,7 +28,7 @@ async function initDatabase() {
         email VARCHAR(100) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updatad_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 👈 注意这里：原代码拼写有误 (updatad_at)，已修正
         INDEX idx_users_email (email)
       )
     `);
