@@ -1,6 +1,7 @@
 // src/server.ts
 const express = require("express");
 const cors = require("cors");
+const serverless = require("serverless-http");
 
 console.log("🚀 服务器启动中...");
 
@@ -53,13 +54,17 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   });
 });
 
-// ===== 关键：启动服务器！ =====
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ Server is running on http://localhost:${PORT}`);
-  console.log(`   Health: http://localhost:${PORT}/api/health`);
-  console.log(`   Auth:   http://localhost:${PORT}/api/auth`);
-  console.log(`   Hot:    http://localhost:${PORT}/api/hot`);
-});
+// ===== 本地开发：启动监听 =====
+// Vercel 环境不会执行这段，因为 process.env.VERCEL 存在
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`✅ Server is running on http://localhost:${PORT}`);
+    console.log(`   Health: http://localhost:${PORT}/api/health`);
+    console.log(`   Auth:   http://localhost:${PORT}/api/auth`);
+    console.log(`   Hot:    http://localhost:${PORT}/api/hot`);
+  });
+}
 
-module.exports = app;
+// ===== Vercel Serverless：导出 handler =====
+module.exports = serverless(app);
