@@ -203,11 +203,15 @@ const fetchHotList = async () => {
   hotLoading.value = true
   hotError.value = false
 
+  // 1. 在这里写死你的后端完整地址
+  const BASE_URL = 'https://focushub-backend-fbhhkmrpe-toky6661-hub.vercel.app'
+
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 5000)
 
-    const res = await fetch('/api/hot/list', {
+    // 2. 把原来的 '/api/hot/list' 替换成拼接后的完整地址
+    const res = await fetch(`${BASE_URL}/api/hot/list`, {
       signal: controller.signal,
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' }
