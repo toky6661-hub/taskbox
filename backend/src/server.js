@@ -1,8 +1,8 @@
-// src/server.js
+﻿// src/server.js
 
 const app = require("./app.js");
 
-// 本地开发时监听端口（Vercel 线上不会执行这段）
+// Local dev: listen on port (Vercel production skips this)
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
@@ -10,5 +10,5 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
-// Vercel Services 模式：直接导出 Express app
+// Vercel Services mode: export Express app directly
 module.exports = app;
