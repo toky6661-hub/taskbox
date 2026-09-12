@@ -3,16 +3,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const pool = require("../config/database");
+
 function generateToken(userId) {
-    const secretKey = process.env.JWT_SECRET || "default_secret_key"; // Use a default secret key if not provided
+    const secretKey = process.env.JWT_SECRET || "default_secret_key";
     const expiresIn = (process.env.JWT_EXPIRES_IN || "7d");
     if (!secretKey) {
         throw new Error("JWT_SECRET is not defined in the environment variables.");
     }
     return jwt.sign({ userId }, secretKey, {
-        expiresIn // Use a default expiration time if not provided
+        expiresIn
     });
 }
+
 async function register(req, res) {
     console.log('📌 register 被调用，pool 是:', pool);
     console.log('📌 pool.query 是否存在?', typeof pool?.query);
@@ -75,6 +77,7 @@ async function register(req, res) {
         });
     }
 }
+
 async function login(req, res) {
     try {
         const { email, password } = req.body;
@@ -126,6 +129,7 @@ async function login(req, res) {
         });
     }
 }
+
 async function getCurrentUser(_req, _res) {
     try {
         const userId = _req.userId;
@@ -164,6 +168,7 @@ async function getCurrentUser(_req, _res) {
         });
     }
 }
+
 function authenticateToken(req, res, next) {
     const authHeader = req.headers.authorization;
     const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
@@ -194,5 +199,5 @@ function authenticateToken(req, res, next) {
         });
     }
 }
+
 module.exports = { register, login, getCurrentUser, authenticateToken };
-//# sourceMappingURL=auth.controller.js.map
