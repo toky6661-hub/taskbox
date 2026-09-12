@@ -1,9 +1,8 @@
 // src/server.js
 
-const serverless = require("serverless-http");
 const app = require("./app.js");
 
-// 本地开发时直接监听端口
+// 本地开发时监听端口（Vercel 线上不会执行这段）
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
@@ -11,6 +10,5 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
-// Vercel 线上通过 serverless-http 导出 handler
-module.exports = serverless(app);
-module.exports.handler = serverless(app);
+// Vercel Services 模式：直接导出 Express app
+module.exports = app;
