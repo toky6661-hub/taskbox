@@ -12,8 +12,8 @@
 
     "types": ["node"],
 
-    "sourceMap": true,
-    "declaration": true,
+    "sourceMap": false,
+    "declaration": false,
     "declarationMap": true,
 
     "noUncheckedIndexedAccess": true,

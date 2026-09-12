@@ -257,3 +257,4 @@ function authenticateToken(
 }
 
 module.exports = { register, login, getCurrentUser, authenticateToken };
+
