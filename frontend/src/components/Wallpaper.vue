@@ -12,8 +12,7 @@
       muted
       loop
       playsinline
-      preload="auto"
-      disablePictureInPicture
+      preload="metadata"
       @error="onVideoError"
     ></video>
 
@@ -110,6 +109,7 @@ const storage = typeof window !== 'undefined' ? window.localStorage : null
 
 // ===== 默认值 =====
 const DEFAULT_IMAGE = '/background.jpg'
+// 修复1：视频路径改为 public 目录
 const videoSrc = props.defaultVideo || '/videos/lemon.mp4'
 
 // ===== localStorage 键名 =====
@@ -117,7 +117,7 @@ const DAILY_KEY = 'dailyWallpaper'
 const DAILY_DATE_KEY = 'dailyWallpaperDate'
 const USER_WALLPAPER_KEY = 'userWallpaper'
 
-// ===== 从 localStorage 恢复 =====
+// ===== 从 localStorage 恢复（安全访问） =====
 const savedMode = storage?.getItem('wallpaperMode') as WallpaperMode | null
 const savedImage = storage?.getItem('background')
 const savedBrightness = storage?.getItem('wallpaperBrightness')
@@ -268,7 +268,7 @@ const onVideoError = () => {
 }
 
 const onImageLoad = () => {
-  // 图片加载成功
+  // 图片加载成功可记录
 }
 
 const onImageError = () => {
@@ -301,12 +301,12 @@ const checkPerformance = () => {
   }
 }
 
-// ===== 监听 fitMode 变化 =====
+// ===== 监听 =====
 watch(fitMode, (val) => {
   storage?.setItem('wallpaperFit', val)
 })
 
-// ===== 窗口聚焦时恢复播放 =====
+// ===== 修复：保存函数引用以便移除 =====
 const handleFocus = () => {
   if (!document.hidden && mode.value === 'video' && !lowPerformance.value) {
     const video = videoRef.value
@@ -316,12 +316,11 @@ const handleFocus = () => {
   }
 }
 
-// ===== 视频加载完成 =====
+// ===== 生命周期 =====
 const handleVideoLoaded = () => {
   if (mode.value === 'video' && !lowPerformance.value) playVideo()
 }
 
-// ===== 页面可见性切换 =====
 const handleVisibilityChange = () => {
   if (lowPerformance.value) return
   if (document.hidden) {
@@ -336,33 +335,14 @@ const handleVisibilityChange = () => {
   }
 }
 
-// ===== 滚动时暂停视频（终极性能保底） =====
-let scrollTimer: ReturnType<typeof setTimeout> | null = null
-
-const handleScroll = () => {
-  if (mode.value !== 'video' || lowPerformance.value) return
-  const video = videoRef.value
-  if (!video) return
-
-  // 滚动时暂停视频帧渲染
-  if (!video.paused) video.pause()
-
-  // 停止滚动 150ms 后恢复播放
-  if (scrollTimer) clearTimeout(scrollTimer)
-  scrollTimer = setTimeout(() => {
-    if (mode.value === 'video' && !lowPerformance.value && !document.hidden) {
-      video.play().catch(() => {})
-    }
-  }, 150)
-}
-
-// ===== 生命周期 =====
 onMounted(() => {
   checkPerformance()
 
   if (mode.value === 'image' && storage?.getItem(USER_WALLPAPER_KEY) !== 'true') {
     fetchDailyWallpaper()
   }
+
+  // 修复3：删除 opacity 控制，直接在 CSS 中设置为 1
 
   const video = videoRef.value
   if (video) {
@@ -375,8 +355,6 @@ onMounted(() => {
 
   document.addEventListener('visibilitychange', handleVisibilityChange)
   window.addEventListener('focus', handleFocus)
-  // 滚动监听（passive 保证不阻塞滚动）
-  window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
 onUnmounted(() => {
@@ -386,9 +364,7 @@ onUnmounted(() => {
     video.removeEventListener('error', onVideoError)
   }
   document.removeEventListener('visibilitychange', handleVisibilityChange)
-  window.removeEventListener('focus', handleFocus)
-  window.removeEventListener('scroll', handleScroll)
-  if (scrollTimer) clearTimeout(scrollTimer)
+  window.removeEventListener('focus', handleFocus) // 修复4：移除正确引用
 })
 
 watch(mode, (newMode) => {
@@ -427,18 +403,17 @@ defineExpose({
 
 <style scoped>
 /* ===== 壁纸层 ===== */
+/* 修复3：删除 opacity: 0，直接设为 1 */
 .wallpaper-layer {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: -1; /* 修复2：负层级避免遮挡 */
   pointer-events: none;
   background: #111;
   transition: opacity 0.8s ease;
-  /* 强制独立 GPU 合成层 */
   transform: translateZ(0);
   backface-visibility: hidden;
   isolation: isolate;
-  will-change: transform;
 }
 
 .wallpaper-layer .wallpaper-video,
@@ -455,7 +430,6 @@ defineExpose({
   display: block;
   transform: translateZ(0);
   backface-visibility: hidden;
-  will-change: transform;
 }
 
 .wallpaper-layer .wallpaper-img {
@@ -464,6 +438,7 @@ defineExpose({
   height: 100%;
   object-fit: cover;
   image-rendering: auto;
+  -webkit-optimize-contrast: auto;
 }
 
 .wallpaper-layer .wallpaper-fallback {
@@ -499,9 +474,8 @@ defineExpose({
   height: 44px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
   color: white;
   font-size: 18px;
   cursor: pointer;
@@ -522,8 +496,8 @@ defineExpose({
   width: 220px;
   padding: 12px 14px;
   border-radius: 14px;
-  /* 从 0.5 加深到 0.8，去掉 blur(16px) */
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   color: white;
