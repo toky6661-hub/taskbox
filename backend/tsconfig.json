@@ -13,8 +13,8 @@
     "types": ["node"],
 
     "sourceMap": false,
-    "declaration": false,
-    "declarationMap": true,
+    "declaration": true,
+    "declarationMap": false,
 
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
