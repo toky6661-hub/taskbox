@@ -1,22 +1,30 @@
 // src/app.js
 const express = require("express");
 const cors = require("cors");
-const authRouter = require("./routes/auth.routes.js");
-const hotRoutes = require("./routes/hot.routes.js");
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
-// 👇 加这一段
+// 打印请求路径
 app.use((req, _res, next) => {
   console.log(`[REQ] ${req.method} ${req.originalUrl}`);
   next();
 });
 
+// 测试：hot 路由
+const hotRoutes = require("./routes/hot.routes.js");
 app.use("/api/hot", hotRoutes);
-app.use("/api/auth", authRouter);
+
+// 测试：auth 路由（加 try/catch 看它加载成功没有）
+try {
+  const authRouter = require("./routes/auth.routes.js");
+  console.log("[OK] auth.routes.js 加载成功, 类型:", typeof authRouter);
+  console.log("[OK] authRouter.stack 长度:", authRouter?.stack?.length);
+  app.use("/api/auth", authRouter);
+} catch (err) {
+  console.error("[FAIL] auth.routes.js 加载失败:", err);
+}
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "success", message: "Hello, API IS RUNNING!" });
